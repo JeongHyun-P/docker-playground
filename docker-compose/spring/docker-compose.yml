@@ -1,0 +1,25 @@
+services:
+  my-server:
+    build: .
+    ports:
+      - 8080:8080
+    depends_on: # 의존 설정한 서비스가 다 실행이 되어야 해당 컨테이너를 실행시킴.
+      my-db:
+        condition: service_healthy
+
+  my-db:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: pwd1234
+      MYSQL_DATABASE: testdb
+    volumes:
+      - ./mysql_Data:/var/lib/mysql
+    ports:
+      - 3307:3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping"]
+      interval: 5s
+      retries: 10
+
+# ./gradlew clean build
+# docker compose up -d --build 
