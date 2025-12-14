@@ -7,6 +7,7 @@ docker-playground/
 ├── dockerfile/        # Dockerfile 작성 및 실행 예제
 ├── docker-compose/   # Docker Compose 실습
 └── deployment/       # AWS EC2 + ECR 기반 배포
+    └── troubleshooting/       # 트러블슈팅
 ```
 
 ### Docker?
