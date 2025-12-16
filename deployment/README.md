@@ -11,6 +11,12 @@
 
 ### 1. EC2 생성 및 Docker 설치
 ```bash
+# timezone 설정
+sudo timedatectl set-timezone Asia/Seoul
+# NTP 활성화
+sudo timedatectl set-ntp true
+
+# 도커 설치
 sudo apt-get update && \
 sudo apt-get install -y ca-certificates curl gnupg lsb-release && \
 sudo install -m 0755 -d /etc/apt/keyrings && \
