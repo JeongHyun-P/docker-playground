@@ -1,4 +1,4 @@
-## Deployment
+## Deployment Single
 - AWS EC2 + ECR 기반 배포
 - EC서버 ubuntu 기준
 
