@@ -26,3 +26,17 @@ rm -f "$TEMP_CONF"
 - Docker 볼륨은 파일 시스템 레벨에서 inode를 추적
 - `sed -i`는 atomic write를 위해 새 파일을 생성
 - `cat > file` 방식은 기존 파일의 inode를 유지하며 내용만 덮어씀
+
+### 2. Github Actions CI/CD 도커 빌드시 EC2 중단
+도커파일 빌드하는 과정에서 EC2사양이 낮아 메모리/CPU 부족으로 Runner가 중단됨
+
+### 원인
+기존 워크플로우는 self-hosted(EC2)에서 Docker 이미지 빌드와 ECR에 푸시까지 하게 짜여져있었음.
+Docker 이미지 빌드는 CPU와 메모리 사용량이 높아 EC2에 과부하 발생
+
+### 해결
+CI/CD 단계 분리
+1. CI
+Dokcer 이미지 빌드 및 ECR Push는 EC2가 아닌 Github Hosted Runner를 사용 (ubuntu-latest)
+2. CD
+최신 이미지 ECR에서 Pull, 배포 스크립트 실행만 slef-hosted runner를 사용하여 EC2에서 진행

@@ -513,3 +513,107 @@ docker compose -p "$PROJECT_NAME" -f "$APP_DIR/compose/backend/$CURRENT.yml" dow
 
 echo "✅ Deploy Complete: Current Color → $NEXT"
 ```
+
+---
+
+## CI/CD with GitHub Actions
+1. GitHub Actions 등록 스크립트 실행 완료 후 runner 서비스 등록 및 자동시작 설정
+```bash
+# 설치 및 서비스 등록
+./svc.sh install
+./svc.sh start
+```
+
+2. 워크플로우 파일 작성
+.github/workflows/deploy-prod.yml
+```yml
+# 러너 잘 도는지 테스트
+name: deploy-prod
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: [self-hosted, Linux, X64, deploy-prod]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Print Working Directory
+      run: |
+        echo "Runner is working!"
+        pwd
+        whoami
+        hostname
+```
+
+러너 확인 후 내용 수정
+```yml
+name: deploy-prod
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest   # GitHub Actions Hosted runner에서 빌드
+
+    steps:
+      # 레포지토리 코드 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Yarn 캐시 활용
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: yarn-
+
+      # AWS 자격 증명 구성
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Amazon ECR에 로그인
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Docker 이미지 빌드 및 태그
+      - name: Build Docker image
+        run: |
+          docker build --platform linux/amd64 -t back:latest .
+          docker tag back:latest ${{ secrets.ECR_REPOSITORY_BACK }}:latest
+
+      # Docker 이미지를 ECR에 푸시
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY_BACK }}:latest
+
+  deploy-on-ec2:
+    needs: build-and-push
+    runs-on: self-hosted # 자체 호스팅된 EC2 인스턴스에서 배포
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # EC2 인스턴스의 배포 스크립트 실행
+      - name: Pull and run latest Docker image
+        run: |
+          cd ~/app
+          docker pull ${{ secrets.ECR_REPOSITORY_BACK }}:latest
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh
+```
+
