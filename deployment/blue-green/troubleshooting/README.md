@@ -1,5 +1,6 @@
 ### 1. Docker 볼륨 마운트 파일 동기화 이슈
 Blue-Green 배포 시 호스트의 `nginx/api.conf` 파일은 정상적으로 수정되지만 nginx 컨테이너 내부의 파일은 변경되지 않아 upstream 전환이 실패하는 문제
+docker exec nginx cat /etc/nginx/conf.d/api.conf 명령어로 출력시 컨테이너 내부 설정은 안바뀌어있음
 
 ### 원인
 Docker 볼륨 마운트는 **파일 내용 변경**은 실시간으로 반영하지만 `sed -i` 명령어는 다음과 같이 동작하여 문제가 발생
