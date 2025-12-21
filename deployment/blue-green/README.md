@@ -608,6 +608,7 @@ jobs:
       - name: Pull and run latest Docker image
         run: |
           cd ~/app
+          aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin  ${{ secrets.ECR_REPOSITORY_API }}
           docker pull ${{ secrets.ECR_REPOSITORY_API }}:latest
           chmod +x scripts/deploy.sh
           ./scripts/deploy.sh
