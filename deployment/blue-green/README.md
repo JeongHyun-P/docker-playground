@@ -55,7 +55,7 @@ aws --version
 ### 5. 디렉토리 구성 및 환경변수 작성
 
 ```bash
-/home/ubuntu/app/
+/home/ubuntu/api/
 ├── compose/
 │   ├── api/
 │   │   ├── blue.yml
@@ -80,10 +80,10 @@ aws --version
 
 # 디렉토리 생성
 cd /home/ubuntu
-mkdir -p app
-sudo chown -R ubuntu:ubuntu /home/ubuntu/app
-sudo chmod -R 775 /home/ubuntu/app
-cd /home/ubuntu/app
+mkdir -p api
+sudo chown -R ubuntu:ubuntu /home/ubuntu/api
+sudo chmod -R 775 /home/ubuntu/api
+cd /home/ubuntu/api
 mkdir -p compose env nginx scripts logs
 
 # 환경변수 작성
@@ -97,7 +97,7 @@ vi env/api_green.env # 설정 같으면 그냥 cp env/api_blue.env env/api_green
 도커 네트워크를 쓰면 컨테이너가 같은 가상 네트워크에 묶이고 IP가 바뀌어도 이름은 그대로
 
 ```bash
-docker network create app_net  # 네트워크 생성
+docker network create api_net  # 네트워크 생성
 docker network ls  # 확인
 ```
 
@@ -117,11 +117,11 @@ services:
             - ../../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
             - ../../nginx/api.conf:/etc/nginx/conf.d/api.conf:ro
         networks:
-            - app_net
+            - api_net
         restart: always
 
 networks:
-    app_net:
+    api_net:
         external: true
 ```
 
@@ -130,20 +130,20 @@ blue.yml
 ```yml
 services:
     api_blue:
-        image: 990738782497.dkr.ecr.ap-northeast-2.amazonaws.com/api
+        image: 11111111111.dkr.ecr.ap-northeast-2.amazonaws.com/api
         container_name: api_blue
         env_file:
             - ../../env/api_blue.env
         volumes:
-            - ../../logs/api_blue:/app/logs
+            - ../../logs/api_blue:/api/logs
             - /etc/localtime:/etc/localtime:ro
             - /etc/timezone:/etc/timezone:ro
         networks:
-            - app_net
+            - api_net
         restart: always
 
 networks:
-    app_net:
+    api_net:
         external: true
 ```
 
@@ -152,20 +152,20 @@ green.yml
 ```yml
 services:
     api_green:
-        image: 990738782497.dkr.ecr.ap-northeast-2.amazonaws.com/api
+        image: 11111111111.dkr.ecr.ap-northeast-2.amazonaws.com/api
         container_name: api_green
         env_file:
             - ../../env/api_green.env
         volumes:
-            - ../../logs/api_green:/app/logs
+            - ../../logs/api_green:/api/logs
             - /etc/localtime:/etc/localtime:ro
             - /etc/timezone:/etc/timezone:ro
         networks:
-            - app_net
+            - api_net
         restart: always
 
 networks:
-    app_net:
+    api_net:
         external: true
 ```
 
@@ -215,6 +215,8 @@ upstream api_upstream {
 
 server {
     listen 80;
+    client_max_body_size 50M;
+    client_body_timeout 5s;
     server_name api.dockerbg.r-e.kr;
 
     location / {
@@ -270,7 +272,7 @@ CMD ["node", "dist/main.js"]
 ### 10. 컨테이너 실행
 
 ```bash
-cd /home/ubuntu/app
+cd /home/ubuntu/api
 
 # blue 최초 배포
 docker compose -f compose/api/blue.yml up -d
@@ -333,8 +335,8 @@ server {
 
 ```bash
 docker run --rm \
-  -v /home/ubuntu/app/certbot/conf:/etc/letsencrypt \
-  -v /home/ubuntu/app/certbot/www:/var/www/certbot \
+  -v /home/ubuntu/api/certbot/conf:/etc/letsencrypt \
+  -v /home/ubuntu/api/certbot/www:/var/www/certbot \
   certbot/certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
@@ -409,8 +411,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_NAME="api"
-APP_DIR="/home/ubuntu/app"
-NGINX_CONF="$APP_DIR/nginx/api.conf"
+API_DIR="/home/ubuntu/api"
+NGINX_CONF="$API_DIR/nginx/api.conf"
 NGINX_CONTAINER="nginx"
 BACK_PORT="4001"
 HEALTH_PATH="/health-check"
@@ -446,7 +448,7 @@ echo "next color: $NEXT"
 # ------------------------------------------
 # 다음 색상 컨테이너 배포 (latest)
 # ------------------------------------------
-COMPOSE_FILE="$APP_DIR/compose/api/$NEXT.yml"
+COMPOSE_FILE="$API_DIR/compose/api/$NEXT.yml"
 
 echo "▶ $NEXT Container Deploy (latest)"
 docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" pull
@@ -501,7 +503,7 @@ docker exec "$NGINX_CONTAINER" nginx -s reload
 # 이전 컨테이너 Down
 # ------------------------------------------
 echo "▶ stop old container: api_$CURRENT"
-docker compose -p "$PROJECT_NAME" -f "$APP_DIR/compose/api/$CURRENT.yml" down
+docker compose -p "$PROJECT_NAME" -f "$API_DIR/compose/api/$CURRENT.yml" down
 
 echo "✅ Deploy Complete: Current Color → $NEXT"
 ```
@@ -607,7 +609,7 @@ jobs:
       # EC2 인스턴스의 배포 스크립트 실행
       - name: Pull and run latest Docker image
         run: |
-          cd ~/app
+          cd ~/api
           aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin  ${{ secrets.ECR_REPOSITORY_API }}
           docker pull ${{ secrets.ECR_REPOSITORY_API }}:latest
           chmod +x scripts/deploy.sh

@@ -1,0 +1,13 @@
+services:
+  my-server:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: pwd1234
+    volumes:
+      - ./mysql_data:/var/lib/mysql_data
+    ports:
+      - 3307:3306
+  my-cache-server:
+    image: redis
+    ports:
+      - 6379:6379
